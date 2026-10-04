@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Boll Battle - Didi Edition - Map 3000</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#050505;color:#fff;font-family:sans-serif;user-select:none;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+h2{position:fixed;top:8px;left:0;right:0;z-index:5;font-size:16px;color:#ffd700;text-align:center;pointer-events:none}
+.game-shell{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:4vh 1vw 2vh}
+.game-container{position:relative;width:min(96vw,1200px);height:min(82vh,520px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.screen-overlay{position:absolute;inset:0;background:rgba(10,10,10,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border:1px solid #292929;border-radius:14px;gap:12px;padding:20px}
+#loadingScreen{z-index:30}
+#loadingScreen h1,#menuScreen h1{color:#ffd700}
+#loadingStatusText{font-size:14px}
+.progress-container{width:min(72%,460px);background:#222;border-radius:10px;overflow:hidden;border:2px solid #444;height:16px}
+.progress-bar{width:0;height:100%;background:linear-gradient(90deg,#ff9800,#ffeb3b);transition:width .12s linear}
+.btn-menu{width:220px;padding:13px;color:#fff;font-size:15px;font-weight:bold;border:0;border-radius:8px;background:#2196f3}
+#gameStats{width:100%;display:none;flex-wrap:wrap;justify-content:space-around;font-size:12px;font-weight:bold;background:#1a252c;padding:7px;border-radius:8px;gap:6px}
+#cameraControl{width:100%;display:none;justify-content:flex-end;margin-bottom:4px}
+#camBtn{background:#444;color:#fff;border:0;padding:5px 11px;border-radius:5px;font-size:11px;font-weight:bold}
+.canvas-wrap{position:relative;width:100%;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+canvas{background:#1a252c;border:2px solid #444;border-radius:8px;width:100%;height:100%;aspect-ratio:3/1;touch-action:none;display:block;object-fit:fill}
+#fogCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;border:0;background:transparent}
+.controls{margin-top:8px;display:none;gap:6px;flex-wrap:wrap;justify-content:center;width:100%}
+button.ctrl-btn{flex:1;min-width:120px;padding:9px;font-size:11px;font-weight:bold;border:0;border-radius:7px;color:white}
+.btn-miner{background:#fbc02d;color:#000!important}.btn-sword{background:#e91e63}.btn-archer{background:#00bcd4}.btn-spear{background:#ff9800}.btn-giant{background:#7b1fa2}
+#captureText,#commandStatus,#commandBar{display:none}
+#bbProgressBtn{position:fixed!important;right:10px;bottom:56px;margin:0!important;z-index:50;padding:10px 13px!important;border:0;border-radius:12px!important;font-weight:800;background:#333;color:#fff}
+@media (max-width:700px){
+  body{align-items:flex-start}
+  .game-shell{height:100dvh;padding:44px 7px 8px;align-items:flex-start}
+  .game-container{width:100%;height:auto;min-height:0}
+  h2{top:12px;font-size:20px}
+  #gameStats{font-size:10px;padding:6px 4px;gap:4px;justify-content:space-between}
+  #cameraControl{margin:3px 0}
+  #camBtn{font-size:10px;padding:5px 8px}
+  .canvas-wrap{width:100%;height:auto;flex:none;aspect-ratio:3/1}
+  canvas{width:100%;height:100%}
+  .controls{margin-top:6px;gap:4px}
+  button.ctrl-btn{min-width:0;flex:1 1 calc(33.33% - 4px);padding:8px 3px;font-size:10px}
+  #captureText,#commandStatus{font-size:10px!important}
+  #commandBar{flex-wrap:wrap!important;gap:4px!important}
+  #commandBar .ctrl-btn{flex:1 1 calc(33.33% - 4px)}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .game-shell{padding:1vh 1vw}
+  .game-container{height:96vh}
+  h2{display:none}
+  #gameStats{font-size:10px;padding:4px}
+  .controls{margin-top:4px}
+  button.ctrl-btn{padding:6px;font-size:10px}
+}
+</style>
+
+<style id="progress-v1-style">
+#bbProgress{display:none;position:fixed;inset:0;z-index:999;background:rgba(7,11,18,.96);
+color:#fff;font-family:system-ui,sans-serif;padding:18px;overflow:auto}
+#bbProgress .box{max-width:720px;margin:auto;background:#172235;border:1px solid #30415d;
+border-radius:20px;padding:20px}
+#bbProgress h2{margin:0 0 4px}.muted{opacity:.7;font-size:13px}
+.bbLevel{margin-top:15px;padding:14px;border-radius:14px;background:#0f1725}
+.bbXP{height:9px;background:#27364c;border-radius:9px;overflow:hidden;margin-top:7px}
+.bbXP i{display:block;height:100%;width:0;background:#fff;transition:.3s}
+.bbStats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
+.bbStat{background:#0f1725;padding:11px;border-radius:12px}.bbStat b{display:block;font-size:20px}
+.bbStat small{opacity:.65}.bbAch{margin-top:14px}.bbAch div{padding:9px;background:#0f1725;border-radius:10px;margin:5px 0;font-size:13px}
+.bbAch .off{opacity:.38}
+#bbClose{width:100%;margin-top:15px;padding:11px;border:0;border-radius:10px;font-weight:800}
+#bbProgressBtn{margin:8px;padding:9px 13px;border:0;border-radius:10px;font-weight:800}
+</style>
+
+
+<style id="progress-v2-mobile">
+@media (max-width:700px){
+ #bbProgress{padding:10px}
+ #bbProgress .box{width:100%;padding:15px;border-radius:16px}
+ #bbProgress h2{position:static;font-size:20px;text-align:left;color:#fff}
+ .bbStats{grid-template-columns:repeat(2,1fr);gap:7px}
+ .bbStat{padding:9px}
+ .bbStat b{font-size:18px}
+}
+</style>
+
+<style id="responsive-layout-v3">
+/* Perbaikan utama: game dan kontrol harus tersusun vertikal, bukan menyempit berdampingan */
+.game-shell{
+  flex-direction:column !important;
+  width:100vw !important;
+  height:100vh !important;
+  max-width:none !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+.game-container{
+  flex:0 0 auto !important;
+  width:min(96vw,1200px) !important;
+}
+#controlsDiv,#commandBar{
+  flex:0 0 auto !important;
+  width:min(96vw,1200px) !important;
+}
+@media (max-width:700px){
+  .game-shell{
+    width:100vw !important;
+    padding:44px 7px 8px !important;
+  }
+  .game-container{
+    width:100% !important;
+  }
+  #controlsDiv,#commandBar{
+    width:100% !important;
+  }
+  /* Arena dibuat cukup besar di HP */
+  .canvas-wrap{
+    width:100% !important;
+    aspect-ratio:3/1 !important;
+  }
+  #gameStats{
+    width:100% !important;
+  }
+}
+</style>
+
+
+<style id="spawn-top-layout-v5">
+/* Tombol spawn milik pemain berada di atas arena dan tetap mudah ditekan. */
+#controlsDiv{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  justify-content:center !important;
+  align-items:stretch !important;
+  gap:7px !important;
+  margin:7px auto !important;
+  padding:0 2px !important;
+}
+#controlsDiv .ctrl-btn{
+  flex:1 1 120px !important;
+  min-width:105px !important;
+  min-height:48px !important;
+  font-size:15px !important;
+  touch-action:manipulation !important;
+}
+.canvas-wrap{
+  width:100% !important;
+  margin-top:4px !important;
+}
+#gameStats{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  justify-content:center !important;
+  gap:6px !important;
+}
+#gameStats>div{
+  flex:1 1 29% !important;
+  min-width:100px !important;
+  text-align:center !important;
+}
+@media(max-width:700px){
+  #controlsDiv .ctrl-btn{
+    flex:1 1 calc(33.333% - 7px) !important;
+    min-width:0 !important;
+    font-size:13px !important;
+    padding:8px 4px !important;
+  }
+  #gameStats>div{
+    flex:1 1 30% !important;
+    min-width:90px !important;
+    font-size:13px !important;
+  }
+}
+</style>
+
+
+
+
+
+<style id="bb-new-menu-style">
+#bbMenu{
+position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;
+background:#03080e;padding:12px;box-sizing:border-box;color:#fff;font-family:Arial,sans-serif
+}
+#bbMenu .scene{
+position:relative;width:min(980px,100%);height:min(700px,94vh);min-height:500px;overflow:hidden;
+border-radius:24px;border:1px solid #3f596c;
+background:
+radial-gradient(circle at 50% 20%,#f9d96b55 0 7%,transparent 28%),
+linear-gradient(#06101b 0%,#0b2941 48%,#17452f 72%,#06110a 100%);
+box-shadow:0 20px 80px #000c
+}
+#bbMenu .scene:after{
+content:"";position:absolute;left:-5%;right:-5%;bottom:-5%;height:46%;
+background:#123a28;clip-path:polygon(0 50%,12% 26%,23% 42%,34% 14%,47% 38%,60% 19%,73% 44%,86% 17%,100% 36%,100% 100%,0 100%)
+}
+#bbMenu .stars{position:absolute;inset:0}
+#bbMenu .stars span{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
+#bbMenu .stars span:nth-child(1){left:11%;top:13%}.stars span:nth-child(2){left:25%;top:8%}
+#bbMenu .stars span:nth-child(3){left:73%;top:12%}.stars span:nth-child(4){left:88%;top:18%}
+#bbMenu .stars span:nth-child(5){left:58%;top:7%}.stars span:nth-child(6){left:40%;top:15%}
+#bbMenu .brand{
+position:absolute;left:50%;top:25%;transform:translate(-50%,-50%);text-align:center;z-index:3;
+width:70%
+}
+#bbMenu h1{
+margin:0;color:#ffd34d;font-size:clamp(42px,8vw,78px);font-weight:1000;
+text-shadow:0 5px #664900,0 0 30px #ffd34d33
+}
+#bbMenu .edition{margin-top:3px;color:#d8e3ea;font-weight:900;letter-spacing:5px}
+#bbMenu .tag{margin-top:10px;color:#ffd34d;font-size:12px;font-weight:800}
+#bbMenu .menuButtons{
+position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:4;
+width:min(420px,90%);display:grid;grid-template-columns:1fr 1fr;gap:10px
+}
+#bbMenu button{
+min-height:54px;border:1px solid #466277;border-radius:13px;
+background:linear-gradient(#20394d,#142936);color:#fff;font-weight:900;
+font-size:13px;box-shadow:0 4px 0 #050b10;cursor:pointer;touch-action:manipulation
+}
+#bbMenu button:active{transform:translateY(2px)}
+#bbMenu .main{grid-column:1/-1;background:linear-gradient(#f4c943,#c8890d);color:#151108;border-color:#ffe48b;font-size:18px}
+#bbMenu .top{
+position:absolute;top:13px;z-index:5;padding:8px 12px;border-radius:999px;
+background:#112333dd;border:1px solid #405a6e;font-size:12px
+}
+#bbMenu .crystal{right:13px}.music{left:13px}
+#bbMenu .credit{
+position:absolute;left:50%;bottom:17px;transform:translateX(-50%);z-index:4;
+color:#b8c7d0;font-size:11px;white-space:nowrap
+}
+#bbMode{
+position:fixed;inset:0;z-index:11000;display:none;place-items:center;
+background:#02060bd9;backdrop-filter:blur(5px);padding:15px
+}
+#bbMode.show{display:grid}
+#bbMode .box{
+width:min(92vw,480px);padding:22px;border-radius:20px;border:1px solid #ffd76a66;
+background:linear-gradient(#142b3d,#07131d);box-shadow:0 20px 70px #000b;text-align:center
+}
+#bbMode h2{color:#ffe27a;margin:0 0 14px}
+#bbMode .choices{display:grid;gap:10px}
+#bbMode button{width:100%;min-height:52px}
+#bbMode .close{background:#101b24;color:#b9c7d0}
+@media(max-width:600px){
+#bbMenu{padding:0}#bbMenu .scene{height:100%;min-height:100%;border:0;border-radius:0}
+#bbMenu .brand{top:27%}.menuButtons{bottom:78px}
+}
+</style>
+
+<style id="bb-victory-replay-style">
+#bbVictoryReplay{display:none;position:fixed;inset:0;z-index:20000;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.88);font-family:Arial,sans-serif}
+#bbVictoryReplay.show{display:flex}
+#bbVictoryReplay .replay-box{width:min(92vw,480px);padding:24px;text-align:center;background:linear-gradient(#172b3d,#07131d);border:1px solid #ffd34d66;border-radius:20px;box-shadow:0 20px 70px #000b}
+#bbVictoryReplay h2{position:static;color:#ffd34d;margin:0 0 10px}
+#bbVictoryReplay p{color:#c6d3dc;margin-bottom:16px}
+#bbReplayDownload,#bbReplayClose{width:100%;min-height:50px;border:0;border-radius:12px;font-weight:900;font-size:14px;cursor:pointer}
+#bbReplayDownload{background:linear-gradient(#f4c943,#c8890d);color:#151108}
+#bbReplayClose{margin-top:9px;background:#263746;color:#fff}
+</style>
+
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#07131d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="images/icon-192.png" type="image/svg+xml">
+</head>
+<body>
+<h2>Boll Battle</h2>
+<div class="game-shell">
+<div class="game-container">
+<div id="loadingScreen" class="screen-overlay">
+<h1 style="color:#ffd700;font-size:20px">Boll Battle</h1>
+<p id="loadingStatusText" style="font-size:13px">Memuat map 3000...</p>
+<div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
+<h3 id="progressPercent" style="color:#ffeb3b;font-size:13px">0%</h3>
+</div>
+<div id="menuScreen" class="screen-overlay" style="display:none">
+<h1 style="font-size:24px">Boll Battle</h1><p style="font-size:13px">Dibuat oleh: <b>Didi</b></p>
+<button class="btn-menu" onclick="startAiMode()">🤖 Main vs AI</button>
+</div>
+<div id="gameStats">
+<div>💰 Gold: <span id="goldText" style="color:#ffd700">60</span></div>
+<div>👥 Pasukan: <span id="popText" style="color:#64b5f6">0/50</span></div>
+<div>🤖 Musuh: <span id="enemyPopText" style="color:#ffb74d">0</span></div>
+</div>
+<div id="controlsDiv" class="controls">
+<button class="ctrl-btn btn-miner" onclick="spawnUnit('miner')">⛏️ Miner (30)</button>
+<button class="ctrl-btn btn-sword" onclick="spawnUnit('swordwrath')">⚔️ Sword (20)</button>
+<button class="ctrl-btn btn-archer" onclick="spawnUnit('archidon')">🏹 Archer (35)</button>
+<button class="ctrl-btn btn-spear" onclick="spawnUnit('spearton')">🛡️ Spear (50)</button>
+<button class="ctrl-btn btn-giant" onclick="spawnUnit('giant')">🗿 Giant (80)</button>
+</div>
+<div class="canvas-wrap"><canvas id="gameCanvas" width="600" height="200"></canvas><canvas id="fogCanvas" width="600" height="200"></canvas></div>
+<div id="cameraControl"><button id="camBtn" onclick="toggleCamera()">🎥 Kamera: Auto</button></div>
+</div>
+<div id="captureText" style="font-size:11px;color:#facc15;margin-top:4px">🚩 Bendera: NETRAL</div><div id="commandStatus" style="font-size:11px;color:#93c5fd">Perintah: ⚔️ MAJU</div>
+<div id="commandBar" style="display:none;width:100%;gap:6px;margin-top:6px">
+<button class="ctrl-btn" style="background:#16a34a" onclick="setCommand('ADVANCE')">⚔️ MAJU</button>
+<button class="ctrl-btn" style="background:#64748b" onclick="setCommand('RETREAT')">🔙 MUNDUR</button>
+<button class="ctrl-btn" style="background:#b45309" onclick="setCommand('BASE')">🛡️ BERTAHAN BASE</button>
+</div>
+</div>
+<script>
+let gameState='MENU',gold=60,enemyGold=60,playerBaseHp=100,enemyBaseHp=100;
+const playerUnits=[],enemyUnits=[],particles=[],weatherParticles=[];
+const MAX_POPULATION=50,WORLD_WIDTH=3000;
+const loadingScreen=document.getElementById('loadingScreen');
+const loadingStatusText=document.getElementById('loadingStatusText');
+const progressBar=document.getElementById('progressBar');
+const progressPercent=document.getElementById('progressPercent');
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+const fogCanvas=document.getElementById('fogCanvas'),fogCtx=fogCanvas.getContext('2d');
+let cameraX=0,isAutoCamera=true,isDragging=false,startX=0,animTimer=0,currentWeather='SUNNY';
+let playerCommand='ADVANCE';
+let flagOwner=null,flagProgress=0; // null=netral, true=player, false=enemy
+let lastFlagGoldTick=0;
+
+function updateText(){
+goldText.innerText=gold;
+enemyPopText.innerText=enemyUnits.length;
+popText.innerText=playerUnits.length+'/50';
+}
+function initWeatherParticles(){
+weatherParticles.length=0;
+let count=currentWeather==='RAINY'?80:currentWeather==='SNOWY'?50:0;
+for(let i=0;i<count;i++)weatherParticles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,
+speedY:currentWeather==='RAINY'?5+Math.random()*4:1+Math.random()*1.5,
+speedX:currentWeather==='RAINY'?-1:(Math.random()-.5)*.5,size:currentWeather==='SNOWY'?2+Math.random()*2:1.5,length:currentWeather==='RAINY'?8+Math.random()*6:0});
+}
+function changeWeather(){
+const w=['SUNNY','RAINY','SNOWY'];currentWeather=w[Math.floor(Math.random()*w.length)];initWeatherParticles();
+weatherText.innerText=currentWeather==='SUNNY'?'☀️ Cerah':currentWeather==='RAINY'?'🌧️ Hujan':'❄️ Salju';
+weatherText.style.color=currentWeather==='RAINY'?'#64b5f6':currentWeather==='SNOWY'?'#e0f7fa':'#e0e0e0';
+}
+setInterval(()=>{if(gameState==='PLAYING'){
+  gold+=10; enemyGold+=10;
+  if(flagOwner===true) gold+=10;
+  if(flagOwner===false) enemyGold+=10;
+  updateText();
+}},10000);
+setInterval(()=>{if(gameState==='PLAYING')changeWeather()},18000);
+
+let audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}
+function playSound(type){if(!audioCtx)return;try{let o=audioCtx.createOscillator(),g=audioCtx.createGain(),n=audioCtx.currentTime;o.connect(g);g.connect(audioCtx.destination);
+o.type=type==='hit'?'sawtooth':type==='coin'?'sine':'triangle';
+o.frequency.setValueAtTime(type==='hit'?120:type==='coin'?500:250,n);
+o.frequency.exponentialRampToValueAtTime(type==='hit'?40:type==='coin'?1000:450,n+.12);
+g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.01,n+.12);o.start(n);o.stop(n+.12)}catch(e){}}
+
+function toggleCamera(){isAutoCamera=!isAutoCamera;camBtn.innerText=isAutoCamera?'🎥 Kamera: Auto':'🎥 Kamera: Manual'}
+canvas.addEventListener('pointerdown',e=>{isDragging=true;isAutoCamera=false;camBtn.innerText='🎥 Kamera: Manual';startX=e.clientX});
+canvas.addEventListener('pointermove',e=>{if(!isDragging)return;cameraX-=e.clientX-startX;startX=e.clientX;cameraX=Math.max(0,Math.min(WORLD_WIDTH-canvas.width,cameraX))});
+canvas.addEventListener('pointerup',()=>isDragging=false);canvas.addEventListener('pointerleave',()=>isDragging=false);
+
+let progress=0;
+const loadSteps=['Menyiapkan dunia Bollara...','Memuat pasukan...','Menyiapkan ekspresi Boll...','Menyiapkan arena...','Selesai!'];
+let loadStep=0;
+function finishLoading(){
+  progress=100;
+  progressBar.style.width='100%';
+  progressPercent.innerText='100%';
+  loadingStatusText.innerText='Selesai!';
+  setTimeout(()=>{loadingScreen.style.display='none';menuScreen.style.display='flex';},350);
+}
+const loadInterval=setInterval(()=>{
+  progress=Math.min(100,progress+10);
+  progressBar.style.width=progress+'%';
+  progressPercent.innerText=progress+'%';
+  loadStep=Math.min(loadSteps.length-1,Math.floor(progress/25));
+  loadingStatusText.innerText=loadSteps[loadStep];
+  if(progress>=100){clearInterval(loadInterval);finishLoading();}
+},140);
+
+function startAiMode(){
+initAudio();menuScreen.style.display='none';gameStats.style.display='flex';cameraControl.style.display='flex';controlsDiv.style.display='flex';captureText.style.display='block';commandStatus.style.display='block';commandBar.style.display='flex';gameState='PLAYING';initWeatherParticles();
+setTimeout(()=>enemyUnits.push(new Unit('miner',false)),1000);
+setInterval(()=>{if(gameState!=='PLAYING'||enemyUnits.length>=MAX_POPULATION)return;
+let costs={miner:30,swordwrath:20,archidon:35,spearton:50,giant:80},type='swordwrath';
+let miners=enemyUnits.filter(u=>u.type==='miner').length;
+if(miners<2&&enemyGold>=30)type='miner';else{let a=['swordwrath','archidon','spearton','giant'].filter(t=>enemyGold>=costs[t]);if(!a.length)return;type=a[Math.floor(Math.random()*a.length)]}
+enemyGold-=costs[type];enemyUnits.push(new Unit(type,false));updateText()},4000);
+requestAnimationFrame(gameLoop);
+}
+function spawnBlood(x,y){playSound('hit');for(let i=0;i<4;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4-1,alpha:1,size:Math.random()*3+1})}
+
+function drawBackground(){
+let g=ctx.createLinearGradient(0,0,0,150);
+if(currentWeather==='SUNNY'){g.addColorStop(0,'#0284c7');g.addColorStop(1,'#7dd3fc')}
+else if(currentWeather==='RAINY'){g.addColorStop(0,'#1e293b');g.addColorStop(1,'#475569')}
+else{g.addColorStop(0,'#475569');g.addColorStop(1,'#94a3b8')}
+ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,150);
+if(currentWeather==='SUNNY'){ctx.fillStyle='#fef08a';ctx.beginPath();ctx.arc(canvas.width-60,35,16,0,Math.PI*2);ctx.fill()}
+
+ctx.fillStyle='#334155';ctx.beginPath();
+for(let x=-300;x<WORLD_WIDTH+500;x+=360){let d=x-cameraX*.15;ctx.moveTo(d,150);ctx.lineTo(d+130,45);ctx.lineTo(d+300,150)}
+ctx.fill();
+ctx.fillStyle='#1e293b';ctx.beginPath();
+for(let x=-400;x<WORLD_WIDTH+500;x+=430){let d=x-cameraX*.3;ctx.moveTo(d,150);ctx.lineTo(d+150,70);ctx.lineTo(d+350,150)}
+ctx.fill();
+if(currentWeather==='SNOWY'){ctx.fillStyle='#cbd5e1';ctx.fillRect(0,150,canvas.width,50)}else{ctx.fillStyle='#0f172a';ctx.fillRect(0,150,canvas.width,50)}
+}
+function drawWeather(){if(currentWeather==='SUNNY')return;for(let p of weatherParticles){p.y+=p.speedY;p.x+=p.speedX;if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width}
+if(currentWeather==='RAINY'){ctx.strokeStyle='rgba(148,163,184,.6)';ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.speedX,p.y+p.length);ctx.stroke()}
+else{ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill()}}}
+function drawGoldMine(x,y){let d=x-cameraX;if(d<-50||d>canvas.width+50)return;ctx.fillStyle='#4a3b32';ctx.beginPath();ctx.moveTo(d-25,y);ctx.lineTo(d-20,y-25);ctx.lineTo(d,y-35);ctx.lineTo(d+20,y-25);ctx.lineTo(d+25,y);ctx.fill();ctx.fillStyle='#ffc107';ctx.beginPath();ctx.arc(d,y-17,11,0,Math.PI*2);ctx.fill()}
+function drawWavingFlag(x, topY, isPlayer=true, scale=1){
+  const t=animTimer*2.2, w=52*scale, h=28*scale, amp=3.2*scale;
+  ctx.strokeStyle='#cbd5e1';ctx.lineWidth=2*scale;
+  ctx.beginPath();ctx.moveTo(x,150);ctx.lineTo(x,topY);ctx.stroke();
+  ctx.fillStyle=isPlayer?'#facc15':'#f87171';
+  ctx.beginPath();
+  ctx.moveTo(x+2*scale,topY);
+  for(let i=0;i<=8;i++){
+    const q=i/8,px=x+2*scale+w*q;
+    const wave=Math.sin(t+i*.7)*amp*q;
+    ctx.lineTo(px,topY+wave);
+  }
+  for(let i=8;i>=0;i--){
+    const q=i/8,px=x+2*scale+w*q;
+    const wave=Math.sin(t+i*.7+.7)*amp*q;
+    ctx.lineTo(px,topY+h*(1-q)+wave);
+  }
+  ctx.closePath();ctx.fill();
+}
+function drawCenterFlag(){
+  let x=WORLD_WIDTH/2-cameraX;
+  if(x<-80||x>canvas.width+80)return;
+  let c=flagOwner===true?'#facc15':flagOwner===false?'#f87171':'#e5e7eb';
+  drawWavingFlag(x,78,flagOwner!==false,1);
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(x-48,48,96,17);
+  ctx.fillStyle='#fff';ctx.font='bold 9px Arial';ctx.textAlign='center';
+  let label=flagOwner===true?'CAPTURE: KAMU':flagOwner===false?'CAPTURE: MUSUH':flagProgress>0?'CAPTURE...':'NETRAL';
+  ctx.fillText(label,x,60);ctx.textAlign='left';
+  if(flagProgress>0){
+    ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(x-35,66,70,6);
+    ctx.fillStyle=c;ctx.fillRect(x-34,67,68*Math.min(1,flagProgress/100),4);
+  }
+}
+function drawBase(x,isPlayer){
+  let d=x-cameraX;if(d<-120||d>canvas.width+120)return;
+  const col=isPlayer?'#2563eb':'#dc2626';
+  // menara benteng
+  ctx.fillStyle='#334155';ctx.fillRect(d-38,72,76,78);
+  ctx.fillStyle=col;ctx.fillRect(d-34,78,68,72);
+  ctx.fillStyle='#475569';ctx.fillRect(d-46,68,20,12);ctx.fillRect(d+26,68,20,12);
+  ctx.fillStyle='#1e293b';ctx.fillRect(d-10,116,20,34);
+  ctx.fillStyle='#64748b';ctx.fillRect(d-28,92,12,16);ctx.fillRect(d+16,92,12,16);
+  // bendera kecil di atas menara
+  drawWavingFlag(d,42,isPlayer,.55);
+  let hp=isPlayer?playerBaseHp:enemyBaseHp,maxHp=100;
+  ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(d-45,58,90,9);
+  ctx.fillStyle='#d32f2f';ctx.fillRect(d-44,59,88,7);
+  ctx.fillStyle='#4caf50';ctx.fillRect(d-44,59,88*Math.max(0,hp/maxHp),7);
+  ctx.fillStyle='#fff';ctx.font='bold 10px Arial';ctx.textAlign='center';
+  ctx.fillText('HP '+Math.max(0,Math.ceil(hp))+'/'+maxHp,d,54);ctx.textAlign='left';
+}
+function setCommand(cmd){
+  playerCommand=cmd;
+  const names={ADVANCE:'⚔️ MAJU',RETREAT:'🔙 MUNDUR',BASE:'🛡️ BERTAHAN BASE'};
+  commandStatus.innerText='Perintah: '+names[cmd];
+}
+function updateCapture(){
+  const cx=WORLD_WIDTH/2, near=170;
+  const p=playerUnits.filter(u=>Math.abs(u.x-cx)<near).length;
+  const e=enemyUnits.filter(u=>Math.abs(u.x-cx)<near).length;
+  if(p>0 && e===0){
+    if(flagOwner===false) flagProgress-=1.0;
+    else flagProgress+=0.8;
+    if(flagProgress>=100){flagProgress=100;flagOwner=true;playSound('coin')}
+    if(flagProgress<=0){flagProgress=0;flagOwner=null}
+  }else if(e>0 && p===0){
+    if(flagOwner===true) flagProgress-=1.0;
+    else flagProgress+=0.8;
+    if(flagProgress>=100){flagProgress=100;flagOwner=false}
+    if(flagProgress<=0){flagProgress=0;flagOwner=null}
+  }
+  captureText.innerText=flagOwner===true?'🚩 Bendera: KAMU (+10/10d)'
+    :flagOwner===false?'🚩 Bendera: MUSUH (+10/10d)'
+    :p>0&&e>0?'⚔️ Bendera: DIPEREBUTKAN':'🚩 Bendera: NETRAL';
+}
+class Unit{
+constructor(type,isPlayer){this.type=type;this.isPlayer=isPlayer;this.x=isPlayer?70:WORLD_WIDTH-70;this.y=type==='giant'?132:140;this.radius=type==='giant'?17:9;
+let hp={miner:35,swordwrath:30,archidon:25,spearton:80,giant:200}[type];this.hp=this.maxHp=hp;this.speed=type==='giant'?.6:type==='spearton'?.9:1.2;this.minerState='TO_MINE';this.mineTimer=0;this.leapCooldown=0;this.faceMood='normal';this.blinkTimer=90+Math.random()*150;this.blinking=false;this.faceBounce=0;this.hitFlash=0;this.lastHp=hp;this.color=isPlayer?'#e91e63':'#d32f2f';
+if(type==='miner')this.color=isPlayer?'#fbc02d':'#ff8f00';if(type==='archidon')this.color=isPlayer?'#00bcd4':'#0288d1';if(type==='spearton')this.color=isPlayer?'#ff9800':'#e65100';if(type==='giant')this.color=isPlayer?'#8e24aa':'#4a148c'}
+update(){
+// Ekspresi wajah hidup: berkedip, melihat lawan, dan bereaksi terhadap aksi.
+this.blinkTimer--; if(this.blinkTimer<=0){this.blinking=true;this.blinkTimer=8;} else if(this.blinking && this.blinkTimer<=5){this.blinking=false;this.blinkTimer=110+Math.random()*170;}
+if(this.hp < this.lastHp-0.01){this.faceMood='hurt';this.hitFlash=10;} else if(this.hitFlash>0){this.hitFlash--; if(this.hitFlash===0)this.faceMood='normal';}
+this.lastHp=this.hp;
+this.faceBounce += 0.12;
+let dir=this.isPlayer?1:-1,list=this.isPlayer?playerUnits:enemyUnits;
+if(this.leapCooldown>0)this.leapCooldown--;if(this.hp<this.maxHp)this.hp=Math.min(this.maxHp,this.hp+.04);
+if(this.type==='miner'){let mine=this.isPlayer?500:WORLD_WIDTH-500,base=this.isPlayer?70:WORLD_WIDTH-70;
+if(this.minerState==='TO_MINE'){if((this.isPlayer?this.x<mine:this.x>mine))this.x+=this.speed*dir;else{this.minerState='MINING';this.mineTimer=0}}
+else if(this.minerState==='MINING'){if(++this.mineTimer>=100)this.minerState='TO_BASE'}
+else{if(this.isPlayer?this.x>base:this.x<base)this.x-=this.speed*dir;else{if(this.isPlayer){gold+=10;if(window.BollProgress)BollProgress.mine(10)}else enemyGold+=10;updateText();playSound('coin');this.faceMood='happy';this.minerState='TO_MINE'}}return}
+if(this.isPlayer){
+  if(playerCommand==='RETREAT'){
+    if(this.x>90)this.x-=this.speed;
+    return;
+  }
+  if(playerCommand==='BASE'){
+    const home=105;
+    if(this.x>home+8)this.x-=this.speed;
+    return;
+  }
+}
+let opponents=this.isPlayer?enemyUnits:playerUnits,closest=null,min=9999;
+for(let o of opponents){let d=(o.x-this.x)*dir;if(d>-15&&d<min){min=d;closest=o}}
+let range=this.type==='archidon'?120:this.type==='giant'?32:22;
+if(closest&&min<=range){this.faceMood='attack';let dmg=this.type==='giant'?1.2:this.type==='swordwrath'?.6:.5;closest.hp-=dmg;if(this.isPlayer&&window.BollProgress)BollProgress.damage(dmg);spawnBlood(closest.x,closest.y-4)}
+else if(!closest||min>range){if(this.faceMood==='attack')this.faceMood='normal';if(this.isPlayer&&this.x>=WORLD_WIDTH-70){let bd=this.type==='giant'?1:.5;enemyBaseHp-=bd;if(window.BollProgress)BollProgress.damage(bd);}else if(!this.isPlayer&&this.x<=70)playerBaseHp-=this.type==='giant'?1:.5;else this.x+=this.speed*dir}
+}
+draw(){
+  let d=this.x-cameraX;
+  if(d<-50||d>canvas.width+50)return;
+  const bob=Math.sin(this.faceBounce)*0.7;
+  const cy=this.y+bob;
+  const r=this.radius;
+  // Bayangan
+  ctx.fillStyle='rgba(0,0,0,.22)';ctx.beginPath();ctx.ellipse(d,cy+r+4,r*1.15,r*.32,0,0,Math.PI*2);ctx.fill();
+  // Boll
+  ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(d,cy,r,0,Math.PI*2);ctx.fill();
+  ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,.35)';ctx.stroke();
+
+  // Wajah: mata, pupil, alis, dan mulut semuanya digambar ulang setiap frame.
+  const faceScale=this.type==='giant'?1.05:1;
+  const eyeY=cy-r*.18;
+  const eyeDx=r*.36;
+  let eyeH=r*.38, pupilX=0, pupilY=0, mouth='normal';
+  if(this.faceMood==='attack'){pupilX=this.isPlayer?r*.10:-r*.10; mouth='grin';}
+  else if(this.faceMood==='hurt'){pupilY=r*.10; mouth='o';}
+  else if(this.faceMood==='happy'){pupilY=-r*.03; mouth='smile';}
+  else {pupilX=this.isPlayer?r*.04:-r*.04; mouth='normal';}
+  if(this.blinking) eyeH=r*.05;
+
+  function eye(ex){
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(ex,eyeY, r*.27, Math.max(0.8,eyeH),0,0,Math.PI*2);ctx.fill();
+    if(!this.blinking){ctx.fillStyle='#111';ctx.beginPath();ctx.arc(ex+pupilX,eyeY+pupilY,r*.12,0,Math.PI*2);ctx.fill();}
+  }
+  eye.call(this,d-eyeDx);eye.call(this,d+eyeDx);
+
+  // Alis mengikuti mood.
+  ctx.strokeStyle='#111';ctx.lineWidth=Math.max(1.5,r*.13);ctx.lineCap='round';
+  if(this.faceMood==='attack'||this.faceMood==='hurt'){
+    ctx.beginPath();ctx.moveTo(d-eyeDx-r*.18,eyeY-r*.28);ctx.lineTo(d-eyeDx+r*.12,eyeY-r*.10);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(d+eyeDx-r*.12,eyeY-r*.10);ctx.lineTo(d+eyeDx+r*.18,eyeY-r*.28);ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.moveTo(d-eyeDx-r*.15,eyeY-r*.22);ctx.lineTo(d-eyeDx+r*.12,eyeY-r*.22);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(d+eyeDx-r*.12,eyeY-r*.22);ctx.lineTo(d+eyeDx+r*.15,eyeY-r*.22);ctx.stroke();
+  }
+
+  // Mulut ekspresif.
+  const my=cy+r*.38;
+  ctx.strokeStyle='#111';ctx.fillStyle='#111';ctx.lineWidth=Math.max(1.2,r*.10);
+  if(mouth==='smile'){
+    ctx.beginPath();ctx.arc(d,my-r*.03,r*.24,0.15,Math.PI-0.15);ctx.stroke();
+  }else if(mouth==='grin'){
+    ctx.beginPath();ctx.ellipse(d,my,r*.28,r*.15,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.fillRect(d-r*.18,my-r*.09,r*.36,r*.07);
+  }else if(mouth==='o'){
+    ctx.beginPath();ctx.ellipse(d,my,r*.12,r*.17,0,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.beginPath();ctx.moveTo(d-r*.20,my);ctx.lineTo(d+r*.20,my);ctx.stroke();
+  }
+
+  // Indikator aksi kecil di atas kepala.
+  if(this.faceMood==='attack'){ctx.fillStyle='rgba(255,235,59,.9)';ctx.font='bold 10px Arial';ctx.textAlign='center';ctx.fillText('!',d,cy-r-5);ctx.textAlign='left';}
+  if(this.hitFlash>0){ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.arc(d,cy,r+2,0,Math.PI*2);ctx.fill();}
+
+  // HP bar
+  let bw=this.type==='giant'?42:30;
+  let by=cy-(this.type==='giant'?38:31);
+  ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(d-bw/2,by,bw,8);
+  ctx.fillStyle='#d32f2f';ctx.fillRect(d-bw/2+1,by+1,bw-2,6);
+  ctx.fillStyle='#4caf50';ctx.fillRect(d-bw/2+1,by+1,(bw-2)*Math.max(0,this.hp/this.maxHp),6);
+  ctx.fillStyle='#fff';ctx.font=this.type==='giant'?'bold 9px Arial':'bold 8px Arial';ctx.textAlign='center';ctx.fillText(Math.max(0,Math.ceil(this.hp)),d,by-3);ctx.textAlign='left';
+}
+}
+
+function spawnUnit(type){if(gameState!=='PLAYING')return;if(playerUnits.length>=MAX_POPULATION){alert('Pasukan sudah mencapai batas maksimal (50)!');return}
+let c={miner:30,swordwrath:20,archidon:35,spearton:50,giant:80}[type];if(gold>=c){gold-=c;playerUnits.push(new Unit(type,true));if(window.BollProgress)BollProgress.unit();updateText();playSound('spawn')}}
+function resetGame(){gold=enemyGold=60;playerBaseHp=enemyBaseHp=100;flagOwner=null;flagProgress=0;playerCommand='ADVANCE';playerUnits.length=enemyUnits.length=particles.length=0;cameraX=0;updateText();gameStats.style.display='none';cameraControl.style.display='none';controlsDiv.style.display='none';captureText.style.display='none';commandStatus.style.display='none';commandBar.style.display='none';menuScreen.style.display='flex';gameState='MENU'}
+
+function isPlayerVision(x){
+  if(x<190)return true;
+  for(const u of playerUnits) if(Math.abs(u.x-x)<230)return true;
+  if(Math.abs(WORLD_WIDTH/2-x)<210 && flagOwner===true)return true;
+  return false;
+}
+function drawFogOfWar(){
+  fogCtx.clearRect(0,0,fogCanvas.width,fogCanvas.height);
+  // Lapisan gelap hanya di atas arena, bukan di HUD.
+  fogCtx.fillStyle='rgba(0,0,0,0.68)';
+  fogCtx.fillRect(0,0,fogCanvas.width,150);
+
+  // Lubang penglihatan: area yang terlihat akan benar-benar transparan.
+  fogCtx.globalCompositeOperation='destination-out';
+  const reveal=(x,y,r)=>{
+    const g=fogCtx.createRadialGradient(x,y,Math.max(0,r*0.55),x,y,r);
+    g.addColorStop(0,'rgba(0,0,0,1)');
+    g.addColorStop(0.82,'rgba(0,0,0,0.95)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    fogCtx.fillStyle=g;
+    fogCtx.beginPath();fogCtx.arc(x,y,r,0,Math.PI*2);fogCtx.fill();
+  };
+
+  // Base sendiri selalu aman dan terlihat.
+  reveal(55-cameraX,120,250);
+
+  // Pasukan membuka penglihatan saat maju.
+  for(const u of playerUnits){
+    const d=u.x-cameraX;
+    reveal(d,120,u.type==='giant'?270:220);
+  }
+
+  // Bendera yang sudah dikuasai ikut membantu penglihatan.
+  if(flagOwner===true) reveal(WORLD_WIDTH/2-cameraX,120,230);
+  fogCtx.globalCompositeOperation='source-over';
+}
+
+
+function gameLoop(){
+if(gameState==='PLAYING'){
+animTimer+=.05;drawBackground();
+if(isAutoCamera){let front=playerUnits.filter(u=>u.type!=='miner').reduce((m,u)=>Math.max(m,u.x),0);if(!front&&playerUnits.length)front=playerUnits[0].x;let target=Math.max(0,front-300);cameraX+=(target-cameraX)*.08}
+cameraX=Math.max(0,Math.min(WORLD_WIDTH-canvas.width,cameraX));
+for(let i=200;i<WORLD_WIDTH;i+=300){ctx.fillStyle='#1e293b';ctx.fillRect(i-cameraX,90,15,60)}
+drawGoldMine(500,150);drawGoldMine(WORLD_WIDTH-500,150);drawBase(40,true);drawBase(WORLD_WIDTH-40,false);drawCenterFlag();
+ctx.strokeStyle='#475569';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,150);ctx.lineTo(canvas.width,150);ctx.stroke();drawWeather();
+for(let i=playerUnits.length-1;i>=0;i--){playerUnits[i].update();playerUnits[i].draw();if(playerUnits[i].hp<=0)playerUnits.splice(i,1)}
+for(let i=enemyUnits.length-1;i>=0;i--){enemyUnits[i].update();if(isPlayerVision(enemyUnits[i].x))enemyUnits[i].draw();if(enemyUnits[i].hp<=0)enemyUnits.splice(i,1)}
+updateCapture();
+updateText();
+drawFogOfWar();
+if(playerBaseHp<=0){if(window.BollProgress)BollProgress.match(false);alert('Kalah! Base hancur.');resetGame();return}
+if(enemyBaseHp<=0){if(window.BollProgress)BollProgress.match(true);alert('Menang! Base musuh hancur.');resetGame();return}
+}
+requestAnimationFrame(gameLoop)}
+</script>
+
+<script id="progress-v1-script">
+(function(){
+const KEY="boll_battle_progress_v1";
+const base={level:1,xp:0,played:0,wins:0,losses:0,units:0,gold:0,damage:0};
+function get(){try{return Object.assign({},base,JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){return {...base}}}
+function save(p){try{localStorage.setItem(KEY,JSON.stringify(p))}catch(e){}}
+function need(l){return 100+(l-1)*50}
+function normalize(p){while(p.xp>=need(p.level)){p.xp-=need(p.level);p.level++}return p}
+window.BollProgress={
+ get:get,
+ addXP:function(n){let p=get();p.xp+=n;normalize(p);save(p)},
+ match:function(win){let p=get();p.played++;win?p.wins++:p.losses++;p.xp+=win?40:15;normalize(p);save(p)},
+ unit:function(){let p=get();p.units++;p.xp+=2;normalize(p);save(p)},
+ mine:function(n){let p=get();p.gold+=Math.max(0,n|0);save(p)},
+ damage:function(n){let p=get();p.damage+=Math.max(0,n|0);save(p)},
+ show:function(){
+   const p=get(), req=need(p.level), pct=Math.min(100,p.xp/req*100);
+   document.getElementById("bbLevel").textContent=p.level;
+   document.getElementById("bbXP").textContent=p.xp+" / "+req+" XP";
+   document.getElementById("bbXPBar").style.width=pct+"%";
+   document.getElementById("bbPlayed").textContent=p.played;
+   document.getElementById("bbWins").textContent=p.wins;
+   document.getElementById("bbUnits").textContent=p.units;
+   document.getElementById("bbGold").textContent=p.gold;
+   document.getElementById("bbDamage").textContent=p.damage;
+   const a=[
+    ["⚔️","Pertempuran Pertama","Mainkan 1 pertandingan",p.played>=1],
+    ["🏆","Pejuang Boll","Menang 5 pertandingan",p.wins>=5],
+    ["⛏️","Penambang Rajin","Kumpulkan 500 Gold",p.gold>=500],
+    ["🪖","Pembentuk Pasukan","Produksi 50 unit",p.units>=50],
+    ["💥","Penghancur","Berikan 1.000 damage",p.damage>=1000]
+   ];
+   document.getElementById("bbAch").innerHTML=a.map(x=>'<div class="'+(x[3]?'':'off')+'">'+x[0]+' <b>'+x[1]+'</b><br><small>'+x[2]+'</small></div>').join("");
+   document.getElementById("bbProgress").style.display="block";
+ }
+};
+function install(){
+ if(document.getElementById("bbProgress"))return;
+ const p=document.createElement("div");p.id="bbProgress";
+ p.innerHTML='<div class="box"><h2>🏆 Progress Pemain</h2><div class="muted">Progress tersimpan otomatis di perangkat ini • XP bertambah saat bermain.</div>'+
+ '<div class="bbLevel"><b>🎖️ Level <span id="bbLevel">1</span></b><div id="bbXP">0 / 100 XP</div><div class="bbXP"><i id="bbXPBar"></i></div></div>'+
+ '<div class="bbStats"><div class="bbStat"><b id="bbPlayed">0</b><small>PERTANDINGAN</small></div>'+
+ '<div class="bbStat"><b id="bbWins">0</b><small>KEMENANGAN</small></div>'+
+ '<div class="bbStat"><b id="bbUnits">0</b><small>UNIT DIPRODUKSI</small></div>'+
+ '<div class="bbStat"><b id="bbGold">0</b><small>GOLD DIKUMPULKAN</small></div>'+
+ '<div class="bbStat"><b id="bbDamage">0</b><small>TOTAL DAMAGE</small></div></div>'+
+ '<div class="bbAch"><h3>🏅 Achievement</h3><div id="bbAch"></div></div>'+
+ '<button id="bbClose">Tutup</button></div>';
+ document.body.appendChild(p);
+ document.getElementById("bbClose").onclick=()=>p.style.display="none";
+ const b=document.createElement("button");b.id="bbProgressBtn";b.textContent="🏆 Progress";
+ b.onclick=()=>window.BollProgress.show();
+ document.body.appendChild(b);
+}
+setTimeout(install,800);
+})();
+</script>
+
+
+
+
+
+<script id="starting-miners-v7">
+(function(){
+  function addStartingMiners(){
+    try{
+      if(typeof playerUnits === "undefined" || typeof Unit !== "function") return;
+      // Only give the free miners to a freshly started match.
+      if(playerUnits.length===0){
+        playerUnits.push(new Unit('miner', true));
+        playerUnits.push(new Unit('miner', true));
+        if(typeof updateText==="function") updateText();
+      }
+    }catch(e){}
+  }
+
+  // Hook common game-start/reset functions without changing their internals.
+  function hook(name){
+    if(typeof window[name] !== "function" || window[name].__minerHooked) return false;
+    const original=window[name];
+    window[name]=function(){
+      const result=original.apply(this,arguments);
+      setTimeout(addStartingMiners,0);
+      return result;
+    };
+    window[name].__minerHooked=true;
+    return true;
+  }
+
+  // The original game uses resetGame/startGame in different builds.
+  setTimeout(function(){
+    hook("startGame");
+    hook("resetGame");
+  },50);
+
+  // Also catch the first time the arena becomes active.
+  let checked=false;
+  const timer=setInterval(function(){
+    if(!checked && typeof playerUnits!=="undefined" && typeof Unit==="function"){
+      // If the game has started and there are no units, add the two starters.
+      const canvas=document.getElementById("gameCanvas");
+      if(canvas && canvas.offsetParent!==null){
+        addStartingMiners();
+        checked=true;
+      }
+    }
+  },250);
+  setTimeout(function(){clearInterval(timer)},10000);
+})();
+</script>
+
+
+<div id="bbMenu">
+  <div class="scene">
+    <div class="stars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="top music">🎵 Musik</div>
+    <div class="top crystal">💎 <span id="bbCrystal">0</span></div>
+
+    <div class="brand">
+      <h1>Boll Battle</h1>
+      <div class="edition">DIDI EDITION</div>
+      <div class="tag">⚔️ BATTLE • STRATEGY • VICTORY ⚔️</div>
+    </div>
+
+    <div class="menuButtons">
+      <button class="main" id="bbMainButton">▶️ MAIN</button>
+      <button id="bbShopButton">🛒 TOKO</button>
+      <button id="bbProgressButton">🏆 PROGRESS</button>
+      <button id="bbHowButton">📖 CARA BERMAIN</button>
+      <button id="bbSettingsButton">⚙️ PENGATURAN</button>
+    </div>
+
+    <div class="credit">Dibuat oleh: Didi</div>
+  </div>
+</div>
+
+<div id="bbMode">
+  <div class="box">
+    <h2>🎮 PILIH MODE</h2>
+    <div class="choices">
+      <button id="bbAiButton">🤖 VS AI</button>
+      <button id="bbOnlineButton">🌐 ONLINE</button>
+      <button class="close" id="bbModeClose">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script id="bb-menu-controller">
+(function(){
+"use strict";
+const menu=document.getElementById("bbMenu");
+const mode=document.getElementById("bbMode");
+
+function panel(title,text){
+  alert(title+"\n\n"+text);
+}
+
+document.getElementById("bbMainButton").onclick=()=>mode.classList.add("show");
+document.getElementById("bbModeClose").onclick=()=>mode.classList.remove("show");
+
+document.getElementById("bbAiButton").onclick=function(){
+  mode.classList.remove("show");
+  menu.style.display="none";
+  if(typeof window.startAiMode==="function"){
+    window.startAiMode();
+  }else{
+    menu.style.display="flex";
+    panel("Game","Fungsi Game Play tidak ditemukan.");
+  }
+};
+
+document.getElementById("bbOnlineButton").onclick=()=>panel(
+"🌐 ONLINE",
+"Mode Online belum aktif. Tombolnya sudah disiapkan untuk fitur multiplayer."
+);
+
+document.getElementById("bbHowButton").onclick=()=>panel(
+"📖 CARA BERMAIN",
+"⛏️ Gunakan Miner untuk mendapatkan Gold.\n⚔️ Buat pasukan.\n🛡️ Lindungi base.\n🏆 Hancurkan base musuh untuk menang."
+);
+
+document.getElementById("bbShopButton").onclick=()=>panel(
+"🛒 TOKO",
+"Tempat membeli dan memasang skin menggunakan 💎 Kristal."
+);
+
+document.getElementById("bbProgressButton").onclick=()=>panel(
+"🏆 PROGRESS",
+"Progress pemain akan menampilkan level, XP, pertandingan, kemenangan, kekalahan, dan pencapaian."
+);
+
+document.getElementById("bbSettingsButton").onclick=()=>panel(
+"⚙️ PENGATURAN",
+"Pengaturan game dapat diatur dari menu aplikasi."
+);
+})();
+</script>
+
+<script id="bb-gameplay-recorder">
+(function(){
+"use strict";
+let recorder=null,chunks=[],replayBlob=null,replayMime="";
+
+function mime(){
+  if(!window.MediaRecorder)return "";
+  const a=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+  return a.find(x=>MediaRecorder.isTypeSupported(x))||"";
+}
+
+window.startGameplayRecording=function(canvasElement){
+  if(!canvasElement||!canvasElement.captureStream||!window.MediaRecorder)return false;
+  try{
+    chunks=[];replayBlob=null;replayMime=mime();
+    if(!replayMime)return false;
+    recorder=new MediaRecorder(canvasElement.captureStream(30),{
+      mimeType:replayMime,videoBitsPerSecond:2500000
+    });
+    recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    recorder.start();
+    return true;
+  }catch(e){console.error("Recorder:",e);return false}
+};
+
+window.stopGameplayRecording=function(){
+  return new Promise(resolve=>{
+    if(!recorder||recorder.state==="inactive"){resolve(null);return}
+    recorder.onstop=function(){
+      replayBlob=new Blob(chunks,{type:replayMime});
+      chunks=[];resolve(replayBlob);
+    };
+    recorder.stop();
+  });
+};
+
+window.downloadGameplayRecording=function(){
+  if(!replayBlob){alert("Rekaman belum tersedia.");return}
+  const ext=replayMime.includes("mp4")?"mp4":"webm";
+  const url=URL.createObjectURL(replayBlob);
+  const a=document.createElement("a");
+  a.href=url;a.download="Boll_Battle_Victory."+ext;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+
+window.showVictoryReplay=()=>document.getElementById("bbVictoryReplay")?.classList.add("show");
+window.hideVictoryReplay=()=>document.getElementById("bbVictoryReplay")?.classList.remove("show");
+
+const oldStart=window.startAiMode;
+if(typeof oldStart==="function"){
+  window.startAiMode=function(){
+    const r=oldStart.apply(this,arguments);
+    setTimeout(()=>window.startGameplayRecording(document.getElementById("gameCanvas")),150);
+    return r;
+  };
+}
+
+const oldAlert=window.alert;
+window.alert=async function(msg){
+  if(msg==="Menang! Base musuh hancur."){
+    await window.stopGameplayRecording();
+    window.showVictoryReplay();
+    if(typeof window.resetGame==="function")window.resetGame();
+    return;
+  }
+  oldAlert(msg);
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("bbReplayDownload")?.addEventListener("click",window.downloadGameplayRecording);
+  document.getElementById("bbReplayClose")?.addEventListener("click",window.hideVictoryReplay);
+});
+})();
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./pwabuilder-sw.js').catch(err => console.warn('Service worker:', err)));
+}
+</script>
+</body>
+</html>
