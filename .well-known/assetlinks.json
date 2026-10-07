@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.netlify.bollbattle.twa",
+      "sha256_cert_fingerprints": [
+        "B0:3A:4E:47:82:05:21:72:22:EA:CA:0A:AF:0A:CD:BF:E0:44:3C:92:57:A2:24:EB:53:81:89:59:16:88:79:AA"
+      ]
+    }
+  }
+]
